@@ -1,10 +1,11 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -13,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 221.2 83% 53.9%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -30,25 +31,12 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 221.2 83% 53.9%;
 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    --trade-green: 142.1 70.6% 45.3%;
+    --trade-red: 0 84.2% 60.2%;
   }
 
   .dark {
@@ -61,7 +49,7 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -78,15 +66,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --ring: 224.3 76.3% 48%;
   }
 }
 
@@ -97,5 +77,73 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 dark:bg-gray-900/50 backdrop-blur-md border border-white/20 dark:border-gray-800/30 shadow-lg;
+  }
+  
+  .trading-card {
+    @apply glass-card p-4 rounded-lg transition-all duration-300 hover:shadow-xl;
+  }
+  
+  .chart-container {
+    @apply w-full h-64 md:h-80 lg:h-96 rounded-lg overflow-hidden;
+  }
+
+  .page-transition-enter {
+    @apply opacity-0 transform translate-x-4;
+  }
+  
+  .page-transition-enter-active {
+    @apply opacity-100 transform translate-x-0 transition-all duration-300 ease-out;
+  }
+  
+  .page-transition-exit {
+    @apply opacity-100 transform translate-x-0;
+  }
+  
+  .page-transition-exit-active {
+    @apply opacity-0 transform -translate-x-4 transition-all duration-300 ease-in;
+  }
+  
+  .nav-link {
+    @apply relative px-4 py-2 rounded-md transition-all duration-200 text-gray-600 hover:text-trade-blue-600 dark:text-gray-300 dark:hover:text-trade-blue-400;
+  }
+  
+  .nav-link.active {
+    @apply text-trade-blue-600 dark:text-trade-blue-400 font-medium;
+  }
+  
+  .nav-link.active::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-trade-blue-500 rounded-full;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  .badge-success {
+    @apply bg-trade-green-500/10 text-trade-green-600;
+  }
+  
+  .badge-danger {
+    @apply bg-trade-red-500/10 text-trade-red-600;
+  }
+}
+
+.lazy-image {
+  @apply transition-opacity duration-500 opacity-0;
+}
+
+.lazy-image.loaded {
+  @apply opacity-100;
 }
