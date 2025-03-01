@@ -1,126 +1,178 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  LineChart, 
-  GraduationCap, 
-  Trophy, 
-  User,
-  Menu,
-  X
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Moon, Sun, Menu, X, User, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
-const Navbar = () => {
+export default function Navbar() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    document.documentElement.classList.toggle("dark");
+  };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location.pathname]);
+  const isActive = (path: string) => location.pathname === path;
 
-  const routes = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/simulator', label: 'Trade', icon: LineChart },
-    { path: '/learn', label: 'Learn', icon: GraduationCap },
-    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { path: '/profile', label: 'Profile', icon: User },
+  const navLinks = [
+    { name: "Dashboard", path: "/" },
+    { name: "Simulator", path: "/simulator" },
+    { name: "Learn", path: "/learn" },
+    { name: "Community", path: "/community" },
   ];
 
   return (
-    <header
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out',
-        scrolled ? 'py-3 glass-card' : 'py-5 bg-transparent'
-      )}
-    >
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link 
-          to="/" 
-          className="flex items-center space-x-2 text-2xl font-bold text-trade-blue-600"
-        >
-          <LineChart className="w-8 h-8" />
-          <span className="hidden sm:inline">TradeQuest</span>
-        </Link>
+    <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <span className="text-2xl font-bold text-primary">TradeQuest</span>
+            </Link>
+          </div>
 
-        {isMobile ? (
-          <>
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="block lg:hidden text-gray-700 p-2 rounded-md"
-              aria-label="Toggle menu"
-            >
-              {isOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-
-            {isOpen && (
-              <div className="fixed inset-0 z-50 bg-white flex flex-col pt-20 pb-6 px-4 animate-fade-in">
-                <div className="absolute top-5 right-5">
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="text-gray-700 p-2"
-                    aria-label="Close menu"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                <nav className="flex flex-col space-y-4">
-                  {routes.map((route) => (
-                    <Link
-                      key={route.path}
-                      to={route.path}
-                      className={cn(
-                        'nav-link flex items-center space-x-3 py-3 px-4 rounded-lg transition-all',
-                        location.pathname === route.path 
-                          ? 'bg-trade-blue-50 text-trade-blue-600' 
-                          : 'hover:bg-gray-50'
-                      )}
-                    >
-                      <route.icon className="w-5 h-5" />
-                      <span>{route.label}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-            )}
-          </>
-        ) : (
-          <nav className="hidden lg:flex items-center space-x-1">
-            {routes.map((route) => (
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center space-x-1">
+            {navLinks.map((link) => (
               <Link
-                key={route.path}
-                to={route.path}
-                className={cn(
-                  'nav-link flex items-center space-x-2',
-                  location.pathname === route.path && 'active'
-                )}
+                key={link.path}
+                to={link.path}
+                className={`nav-link ${isActive(link.path) ? "active" : ""}`}
               >
-                <route.icon className="w-4 h-4" />
-                <span>{route.label}</span>
+                {link.name}
               </Link>
             ))}
-          </nav>
-        )}
-      </div>
-    </header>
-  );
-};
+          </div>
 
-export default Navbar;
+          {/* Right side actions */}
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="mr-2"
+            >
+              {theme === "light" ? (
+                <Moon className="h-5 w-5" />
+              ) : (
+                <Sun className="h-5 w-5" />
+              )}
+            </Button>
+
+            {/* User dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url} alt="User" />
+                    <AvatarFallback>
+                      {profile?.username?.charAt(0)?.toUpperCase() || 
+                       user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {profile?.username || user?.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden flex items-center ml-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive(link.path)
+                    ? "bg-primary/10 text-primary"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            ))}
+            <div 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+              onClick={() => {
+                navigate("/profile");
+                setMobileMenuOpen(false);
+              }}
+            >
+              Profile
+            </div>
+            <div 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+              onClick={() => {
+                handleSignOut();
+                setMobileMenuOpen(false);
+              }}
+            >
+              Sign Out
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+}
