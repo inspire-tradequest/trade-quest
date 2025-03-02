@@ -8,6 +8,72 @@ export const AI_SERVICE_URL = "https://ai.inspirecreations.it.com";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// Define database types
+export type Profile = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  level: number;
+  experience_points: number;
+  risk_tolerance: 'low' | 'medium' | 'high';
+  investment_goals: string[];
+  time_horizon: 'short' | 'medium' | 'long';
+  created_at: string;
+  updated_at: string;
+}
+
+export type AIRecommendation = {
+  id: string;
+  user_id: string;
+  recommendation_type: string;
+  content: any;
+  is_read: boolean;
+  created_at: string;
+}
+
+export type TradingStrategy = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  strategy_type: string;
+  parameters: any;
+  performance_metrics: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LearningProgress = {
+  id: string;
+  user_id: string;
+  lesson_id: string;
+  completed: boolean;
+  score: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AIAnalysisRequest = {
+  id: string;
+  user_id: string;
+  request_type: string;
+  request_data: any;
+  response_data: any;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export type PortfolioHolding = {
+  id: string;
+  portfolio_id: string;
+  asset_id: string;
+  quantity: number;
+  current_value: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // AI API client functions
 export const aiApi = {
   getInvestmentRecommendations: async (params: RecommendationRequest) => {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, CheckCircle, Clock, Video, FileText, ArrowRight } from "lucide-react";
-import { aiApi, LearningContentResponse } from "@/integrations/supabase/client";
+import { aiApi, LearningContentResponse, LearningProgress } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 
@@ -15,7 +15,7 @@ export default function LearningAI() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [learningContent, setLearningContent] = useState<LearningContentResponse | null>(null);
-  const [userProgress, setUserProgress] = useState<any[]>([]);
+  const [userProgress, setUserProgress] = useState<LearningProgress[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [currentTab, setCurrentTab] = useState('lessons');
   

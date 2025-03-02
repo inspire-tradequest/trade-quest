@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, BarChart, AlertCircle, CheckCircle } from "lucide-react";
-import { aiApi, RecommendationResponse } from "@/integrations/supabase/client";
+import { aiApi, RecommendationResponse, AIRecommendation, PortfolioHolding } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 
@@ -16,7 +16,7 @@ export default function AIRecommendations() {
   const [isLoading, setIsLoading] = useState(false);
   const [riskTolerance, setRiskTolerance] = useState(profile?.risk_tolerance || 'medium');
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
-  const [savedRecommendations, setSavedRecommendations] = useState<any[]>([]);
+  const [savedRecommendations, setSavedRecommendations] = useState<AIRecommendation[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function AIRecommendations() {
         .select('asset_id, quantity, current_value')
         .eq('portfolio_id', portfolioData.id);
       
-      const currentPortfolio = holdings?.map(h => ({
+      const currentPortfolio = holdings?.map((h: PortfolioHolding) => ({
         assetId: h.asset_id,
         amount: h.current_value
       })) || [];

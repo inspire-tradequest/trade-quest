@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, LogOut, Upload, Trophy } from "lucide-react";
+import ProgressBar from "@/components/ui/progress-bar";
 
 export default function Profile() {
   const { user, profile, signOut } = useAuth();
@@ -71,7 +71,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center">
-                <Progress value={(profile?.experience_points || 0) % 100} className="flex-1 mr-4" />
+                <ProgressBar value={(profile?.experience_points || 0) % 100} className="flex-1 mr-4" />
                 <span className="text-sm text-gray-500">{profile?.experience_points || 0} XP</span>
               </div>
               <Button className="w-full" variant="outline" onClick={() => {}}>
