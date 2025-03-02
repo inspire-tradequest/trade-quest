@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -6,7 +5,71 @@ const SUPABASE_URL = "https://qaddsyblirslplvkpnpv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZGRzeWJsaXJzbHBsdmtwbnB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NzE3MDYsImV4cCI6MjA1NjQ0NzcwNn0.sQCYSxL0CZG6h1Q1hsrv9EtRp4DuENdD4CMOTdpD0N8";
 export const AI_SERVICE_URL = "https://ai.inspirecreations.it.com";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Enhanced Database type that includes our tables
+export type DatabaseWithTables = Database & {
+  public: {
+    Tables: {
+      profiles: {
+        Row: Profile;
+        Insert: Omit<Profile, 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      ai_recommendations: {
+        Row: AIRecommendation;
+        Insert: Omit<AIRecommendation, 'id' | 'created_at'>;
+        Update: Partial<Omit<AIRecommendation, 'id' | 'created_at'>>; 
+      };
+      trading_strategies: {
+        Row: TradingStrategy;
+        Insert: Omit<TradingStrategy, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<TradingStrategy, 'id' | 'created_at' | 'updated_at'>>; 
+      };
+      learning_progress: {
+        Row: LearningProgress;
+        Insert: Omit<LearningProgress, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<LearningProgress, 'id' | 'created_at' | 'updated_at'>>; 
+      };
+      ai_analysis_requests: {
+        Row: AIAnalysisRequest;
+        Insert: Omit<AIAnalysisRequest, 'id' | 'created_at' | 'completed_at'>;
+        Update: Partial<Omit<AIAnalysisRequest, 'id' | 'created_at'>>; 
+      };
+      portfolios: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<{
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        }, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<{
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        }, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      portfolio_holdings: {
+        Row: PortfolioHolding;
+        Insert: Omit<PortfolioHolding, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PortfolioHolding, 'id' | 'created_at' | 'updated_at'>>;
+      };
+    };
+  };
+};
+
+export const supabase = createClient<DatabaseWithTables>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // Define database types
 export type Profile = {

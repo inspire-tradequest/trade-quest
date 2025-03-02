@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +9,13 @@ import { aiApi, RecommendationResponse, AIRecommendation, PortfolioHolding } fro
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 
+type RiskToleranceType = 'low' | 'medium' | 'high';
+
 export default function AIRecommendations() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [riskTolerance, setRiskTolerance] = useState(profile?.risk_tolerance || 'medium');
+  const [riskTolerance, setRiskTolerance] = useState<RiskToleranceType>(profile?.risk_tolerance || 'medium');
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [savedRecommendations, setSavedRecommendations] = useState<AIRecommendation[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -71,9 +72,9 @@ export default function AIRecommendations() {
       
       const response = await aiApi.getInvestmentRecommendations({
         userId: user.id,
-        riskTolerance: riskTolerance as any,
+        riskTolerance: riskTolerance,
         investmentGoals: profile?.investment_goals || [],
-        timeHorizon: profile?.time_horizon as any || 'medium',
+        timeHorizon: profile?.time_horizon || 'medium',
         currentPortfolio
       });
       
@@ -112,6 +113,10 @@ export default function AIRecommendations() {
     }
   };
 
+  const handleRiskToleranceChange = (value: string) => {
+    setRiskTolerance(value as RiskToleranceType);
+  };
+
   return (
     <div className="container max-w-6xl py-10">
       <div className="mb-8">
@@ -133,7 +138,7 @@ export default function AIRecommendations() {
                 <label className="text-sm font-medium">Risk Tolerance</label>
                 <Select
                   value={riskTolerance}
-                  onValueChange={setRiskTolerance}
+                  onValueChange={handleRiskToleranceChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select risk tolerance" />

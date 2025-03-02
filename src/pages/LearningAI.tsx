@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -46,7 +45,6 @@ export default function LearningAI() {
     
     setIsLoading(true);
     try {
-      // This would normally come from user preferences, but we'll use defaults for the demo
       const response = await aiApi.getLearningContent({
         userId: user.id,
         knowledgeLevel: 'beginner',
@@ -56,7 +54,6 @@ export default function LearningAI() {
       
       setLearningContent(response);
       
-      // If there's a recommended next lesson, select it
       if (response.recommendedPath.nextLessons.length > 0) {
         const nextLessonId = response.recommendedPath.nextLessons[0];
         const nextLesson = response.lessons.find(lesson => lesson.id === nextLessonId);
@@ -84,7 +81,6 @@ export default function LearningAI() {
     if (!user) return;
     
     try {
-      // Check if there's already a record for this lesson
       const { data: existingProgress } = await supabase
         .from('learning_progress')
         .select('*')
@@ -93,13 +89,11 @@ export default function LearningAI() {
         .maybeSingle();
       
       if (existingProgress) {
-        // Update existing record
         await supabase
           .from('learning_progress')
           .update({ completed: true })
           .eq('id', existingProgress.id);
       } else {
-        // Create new record
         await supabase
           .from('learning_progress')
           .insert({
@@ -109,7 +103,6 @@ export default function LearningAI() {
           });
       }
       
-      // Refresh progress
       fetchUserProgress();
       
       toast({
@@ -126,7 +119,6 @@ export default function LearningAI() {
   };
 
   const takeAssessment = async (assessmentId: string) => {
-    // In a real application, this would navigate to an assessment page
     toast({
       title: "Assessment",
       description: "This would take you to the assessment page in a complete implementation.",

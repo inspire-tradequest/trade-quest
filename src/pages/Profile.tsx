@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,9 +23,9 @@ export default function Profile() {
       setIsUpdating(true);
       
       const { error } = await supabase
-        .from("profiles")
+        .from('profiles')
         .update({ username })
-        .eq("id", user.id);
+        .eq('id', user.id);
         
       if (error) {
         throw error;
