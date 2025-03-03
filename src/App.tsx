@@ -1,92 +1,72 @@
-
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Index from "./pages/Index";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AIRecommendations from "./pages/AIRecommendations";
-import MarketAnalysis from "./pages/MarketAnalysis";
-import RiskAssessment from "./pages/RiskAssessment";
-import LearningAI from "./pages/LearningAI";
-import Simulator from "./pages/Simulator";
-import TradingStrategyTesting from "./pages/TradingStrategyTesting";
-import { Toaster } from "@/components/ui/toaster";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import Layout from "@/components/Layout";
+import NotFound from "@/components/NotFound";
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import AIRecommendations from "@/pages/AIRecommendations";
+import RiskAssessment from "@/pages/RiskAssessment";
+import MarketAnalysis from "@/pages/MarketAnalysis";
+import TradingStrategyTesting from "@/pages/TradingStrategyTesting";
+import Profile from "@/pages/Profile";
+import Simulator from "@/pages/Simulator";
+import LearningAI from "@/pages/LearningAI";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Navbar />
-        <main>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai-recommendations"
-              element={
-                <ProtectedRoute>
-                  <AIRecommendations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/market-analysis"
-              element={
-                <ProtectedRoute>
-                  <MarketAnalysis />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/risk-assessment"
-              element={
-                <ProtectedRoute>
-                  <RiskAssessment />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/learning"
-              element={
-                <ProtectedRoute>
-                  <LearningAI />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/simulator"
-              element={
-                <ProtectedRoute>
-                  <Simulator />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/strategy-testing"
-              element={
-                <ProtectedRoute>
-                  <TradingStrategyTesting />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Toaster />
-      </Router>
+      <RouterProvider router={router} />
+      <Toaster />
     </AuthProvider>
   );
 }
+
+// Define routes
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <NotFound />,
+    children: [
+      {
+        path: "/",
+        element: <Index />
+      },
+      {
+        path: "/auth",
+        element: <Auth />
+      },
+      {
+        path: "/recommendations",
+        element: <ProtectedRoute><AIRecommendations /></ProtectedRoute>
+      },
+      {
+        path: "/risk-assessment",
+        element: <ProtectedRoute><RiskAssessment /></ProtectedRoute>
+      },
+      {
+        path: "/market-analysis",
+        element: <ProtectedRoute><MarketAnalysis /></ProtectedRoute>
+      },
+      {
+        path: "/strategy-testing",
+        element: <ProtectedRoute><TradingStrategyTesting /></ProtectedRoute>
+      },
+      {
+        path: "/profile",
+        element: <ProtectedRoute><Profile /></ProtectedRoute>
+      },
+      {
+        path: "/simulator",
+        element: <ProtectedRoute><Simulator /></ProtectedRoute>
+      },
+      {
+        path: "/learn",
+        element: <ProtectedRoute><LearningAI /></ProtectedRoute>
+      }
+    ]
+  }
+]);
 
 export default App;

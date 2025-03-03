@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,13 @@ import {
   Briefcase,
   Sliders,
   X,
+  HomeIcon,
+  SparklesIcon,
+  ShieldAlertIcon,
+  BarChart3Icon,
+  BrainCircuitIcon,
+  GraduationCapIcon,
+  TimerResetIcon,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -27,44 +33,44 @@ export default function Navbar() {
 
   const navItems = [
     {
-      name: "Dashboard",
-      path: "/",
-      icon: <LayoutDashboard className="h-5 w-5" />,
+      name: 'Home',
+      path: '/',
+      icon: <HomeIcon className="h-4 w-4" />,
     },
     {
-      name: "AI Recommendations",
-      path: "/ai-recommendations",
-      icon: <BrainCircuit className="h-5 w-5" />,
+      name: 'AI Recommendations',
+      path: '/recommendations',
+      icon: <SparklesIcon className="h-4 w-4" />,
       requiresAuth: true,
     },
     {
-      name: "Market Analysis",
-      path: "/market-analysis",
-      icon: <BarChart2 className="h-5 w-5" />,
+      name: 'Risk Assessment',
+      path: '/risk-assessment',
+      icon: <ShieldAlertIcon className="h-4 w-4" />,
       requiresAuth: true,
     },
     {
-      name: "Risk Assessment",
-      path: "/risk-assessment",
-      icon: <ShieldAlert className="h-5 w-5" />,
+      name: 'Market Analysis',
+      path: '/market-analysis',
+      icon: <BarChart3Icon className="h-4 w-4" />,
       requiresAuth: true,
     },
     {
-      name: "AI Learning",
-      path: "/learning",
-      icon: <GraduationCap className="h-5 w-5" />,
+      name: 'Trading Strategies',
+      path: '/strategy-testing',
+      icon: <BrainCircuitIcon className="h-4 w-4" />,
       requiresAuth: true,
     },
     {
-      name: "Simulator",
-      path: "/simulator",
-      icon: <Briefcase className="h-5 w-5" />,
+      name: 'Learning Center',
+      path: '/learn',
+      icon: <GraduationCapIcon className="h-4 w-4" />,
       requiresAuth: true,
     },
     {
-      name: "Strategy Testing",
-      path: "/strategy-testing",
-      icon: <Sliders className="h-5 w-5" />,
+      name: 'Simulator',
+      path: '/simulator',
+      icon: <TimerResetIcon className="h-4 w-4" />,
       requiresAuth: true,
     },
   ];

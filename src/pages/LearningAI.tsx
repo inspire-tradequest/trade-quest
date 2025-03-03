@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, CheckCircle, Clock, Video, FileText, ArrowRight } from "lucide-react";
+import { BookOpen, CheckCircle, Clock, Video, FileText, ArrowRight, Award } from "lucide-react";
 import { aiApi, LearningContentResponse, LearningProgress } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
+import InteractiveLearningContent, { InteractiveLearningStep } from "@/components/InteractiveLearningContent";
 
 export default function LearningAI() {
   const { user } = useAuth();
@@ -17,6 +19,7 @@ export default function LearningAI() {
   const [userProgress, setUserProgress] = useState<LearningProgress[]>([]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [currentTab, setCurrentTab] = useState('lessons');
+  const [showInteractive, setShowInteractive] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -119,9 +122,11 @@ export default function LearningAI() {
   };
 
   const takeAssessment = async (assessmentId: string) => {
+    setCurrentTab('assessments');
+    
     toast({
-      title: "Assessment",
-      description: "This would take you to the assessment page in a complete implementation.",
+      title: "Assessment Ready",
+      description: "You can now take the assessment for this lesson.",
     });
   };
 
@@ -149,6 +154,11 @@ export default function LearningAI() {
       default:
         return <FileText className="h-4 w-4" />;
     }
+  };
+  
+  const handleCompleteInteractive = () => {
+    setShowInteractive(false);
+    markLessonAsCompleted(selectedLesson.id);
   };
 
   return (
@@ -218,7 +228,11 @@ export default function LearningAI() {
                         flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50
                         ${selectedLesson?.id === lesson.id ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}
                       `}
-                      onClick={() => setSelectedLesson(lesson)}
+                      onClick={() => {
+                        setSelectedLesson(lesson);
+                        setShowInteractive(false);
+                        setCurrentTab('lessons');
+                      }}
                     >
                       <div className="flex items-center">
                         {isLessonCompleted(lesson.id) ? (
@@ -247,95 +261,164 @@ export default function LearningAI() {
           
           <div className="lg:col-span-2">
             {selectedLesson ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>{selectedLesson.title}</CardTitle>
-                      <CardDescription>
-                        {selectedLesson.estimatedDuration} min • {selectedLesson.difficulty}
-                      </CardDescription>
-                    </div>
-                    <div className={`text-xs px-2 py-1 rounded ${
-                      selectedLesson.format === 'video' ? 'bg-red-100 text-red-800' :
-                      selectedLesson.format === 'interactive' ? 'bg-purple-100 text-purple-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {selectedLesson.format.charAt(0).toUpperCase() + selectedLesson.format.slice(1)}
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent>
-                  <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="lessons">Lesson</TabsTrigger>
-                      <TabsTrigger value="resources">Resources</TabsTrigger>
-                      <TabsTrigger value="assessments">Assessment</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="lessons">
-                      <div className="prose max-w-none">
-                        <p>{selectedLesson.content}</p>
+              showInteractive && selectedLesson.format === 'interactive' && selectedLesson.interactiveContent ? (
+                <div className="space-y-4">
+                  <Card className="mb-4">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle>{selectedLesson.title} - Interactive Module</CardTitle>
+                          <CardDescription>
+                            Complete all steps to finish this module
+                          </CardDescription>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setShowInteractive(false)}>
+                          Back to Lesson
+                        </Button>
                       </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="resources">
-                      <div className="space-y-3">
-                        {selectedLesson.resources.length > 0 ? (
-                          selectedLesson.resources.map((resource, index) => (
-                            <div key={index} className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
-                              <div>
-                                <div className="font-medium">{resource.title}</div>
-                                <div className="text-xs text-gray-500">{resource.type}</div>
-                              </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                  View Resource
-                                </a>
+                    </CardHeader>
+                  </Card>
+                  
+                  <InteractiveLearningContent 
+                    steps={selectedLesson.interactiveContent as InteractiveLearningStep[]}
+                    onComplete={handleCompleteInteractive}
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>{selectedLesson.title}</CardTitle>
+                        <CardDescription>
+                          {selectedLesson.estimatedDuration} min • {selectedLesson.difficulty}
+                        </CardDescription>
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded ${
+                        selectedLesson.format === 'video' ? 'bg-red-100 text-red-800' :
+                        selectedLesson.format === 'interactive' ? 'bg-purple-100 text-purple-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {selectedLesson.format.charAt(0).toUpperCase() + selectedLesson.format.slice(1)}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <Tabs value={currentTab} onValueChange={setCurrentTab}>
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="lessons">Lesson</TabsTrigger>
+                        <TabsTrigger value="resources">Resources</TabsTrigger>
+                        <TabsTrigger value="assessments">Assessment</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="lessons">
+                        <div className="prose max-w-none">
+                          <p>{selectedLesson.content}</p>
+                          
+                          {selectedLesson.format === 'interactive' && selectedLesson.interactiveContent && (
+                            <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                              <h3 className="flex items-center text-purple-800 mb-2">
+                                <Award className="h-5 w-5 mr-2" />
+                                Interactive Learning Available
+                              </h3>
+                              <p className="text-sm text-gray-700 mb-4">
+                                This lesson includes an interactive module to help you better understand the concepts through hands-on practice.
+                              </p>
+                              <Button onClick={() => setShowInteractive(true)}>
+                                Start Interactive Module
                               </Button>
                             </div>
-                          ))
+                          )}
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="resources">
+                        <div className="space-y-3">
+                          {selectedLesson.resources.length > 0 ? (
+                            selectedLesson.resources.map((resource, index) => (
+                              <div key={index} className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium">{resource.title}</div>
+                                  <div className="text-xs text-gray-500">{resource.type}</div>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                                    View Resource
+                                  </a>
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              No additional resources available for this lesson.
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="assessments">
+                        {learningContent.assessments.some(a => a.id === `${selectedLesson.id}_assessment`) ? (
+                          <div>
+                            <p className="mb-4">
+                              Test your knowledge of {selectedLesson.title} with this assessment.
+                            </p>
+                            <Button onClick={() => takeAssessment(`${selectedLesson.id}_assessment`)}>
+                              Start Assessment
+                            </Button>
+                            
+                            {currentTab === 'assessments' && (
+                              <div className="mt-6 space-y-6">
+                                {learningContent.assessments
+                                  .find(a => a.id === `${selectedLesson.id}_assessment`)
+                                  ?.questions.map((question, qIndex) => (
+                                    <div key={qIndex} className="p-4 bg-gray-50 rounded-lg">
+                                      <h4 className="font-medium mb-3">Question {qIndex + 1}: {question.text}</h4>
+                                      <div className="space-y-2">
+                                        {question.options.map((option, oIndex) => (
+                                          <div key={oIndex} className="flex items-center">
+                                            <input 
+                                              type="radio" 
+                                              id={`q${qIndex}-o${oIndex}`}
+                                              name={`question-${qIndex}`}
+                                              className="mr-2"
+                                            />
+                                            <label htmlFor={`q${qIndex}-o${oIndex}`}>{option}</label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                
+                                <Button className="mt-4">
+                                  Submit Assessment
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="text-center py-8 text-gray-500">
-                            No additional resources available for this lesson.
+                            No assessment available for this lesson yet.
                           </div>
                         )}
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="assessments">
-                      {learningContent.assessments.some(a => a.id === `${selectedLesson.id}_assessment`) ? (
-                        <div>
-                          <p className="mb-4">
-                            Test your knowledge of {selectedLesson.title} with this assessment.
-                          </p>
-                          <Button onClick={() => takeAssessment(`${selectedLesson.id}_assessment`)}>
-                            Start Assessment
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          No assessment available for this lesson yet.
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-                
-                <CardFooter className="flex justify-end space-x-2 border-t pt-4">
-                  {isLessonCompleted(selectedLesson.id) ? (
-                    <Button variant="outline" disabled>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Completed
-                    </Button>
-                  ) : (
-                    <Button onClick={() => markLessonAsCompleted(selectedLesson.id)}>
-                      Mark as Completed
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                  
+                  <CardFooter className="flex justify-end space-x-2 border-t pt-4">
+                    {isLessonCompleted(selectedLesson.id) ? (
+                      <Button variant="outline" disabled>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Completed
+                      </Button>
+                    ) : (
+                      <Button onClick={() => markLessonAsCompleted(selectedLesson.id)}>
+                        Mark as Completed
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              )
             ) : (
               <Card className="h-full flex flex-col justify-center items-center p-10 text-center">
                 <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
