@@ -1,50 +1,92 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
+import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AIRecommendations from "./pages/AIRecommendations";
+import MarketAnalysis from "./pages/MarketAnalysis";
+import RiskAssessment from "./pages/RiskAssessment";
+import LearningAI from "./pages/LearningAI";
+import Simulator from "./pages/Simulator";
+import TradingStrategyTesting from "./pages/TradingStrategyTesting";
+import { Toaster } from "@/components/ui/toaster";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <Router>
+        <Navbar />
+        <main>
           <Routes>
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route 
-              path="/profile" 
+            <Route
+              path="/profile"
               element={
                 <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route
+              path="/ai-recommendations"
+              element={
+                <ProtectedRoute>
+                  <AIRecommendations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/market-analysis"
+              element={
+                <ProtectedRoute>
+                  <MarketAnalysis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/risk-assessment"
+              element={
+                <ProtectedRoute>
+                  <RiskAssessment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/learning"
+              element={
+                <ProtectedRoute>
+                  <LearningAI />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simulator"
+              element={
+                <ProtectedRoute>
+                  <Simulator />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/strategy-testing"
+              element={
+                <ProtectedRoute>
+                  <TradingStrategyTesting />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+        </main>
+        <Toaster />
+      </Router>
     </AuthProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;
