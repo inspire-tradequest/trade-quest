@@ -44,7 +44,7 @@ serve(async (req) => {
 
     // Get the request body
     const requestData = await req.json();
-    const { knowledgeLevel, topics, preferredFormats } = requestData;
+    const { knowledgeLevel, topics, preferredFormats, courseId } = requestData;
 
     // Log the request in the database
     const { data: logData, error: logError } = await supabaseClient
@@ -64,15 +64,17 @@ serve(async (req) => {
 
     const requestId = logData?.id;
 
-    // While waiting for the AI service, we'll create a mock response for development
-    // This allows us to test the UI without relying on the external AI service
-    // In production, this would be replaced with the actual AI service call
-    
-    // Mock response based on the user's preferences
-    const mockContent = generateMockLearningContent(knowledgeLevel, topics, preferredFormats);
+    // Check if a specific course is requested
+    let responseData;
+    if (courseId) {
+      responseData = generateCourseContent(courseId, knowledgeLevel);
+    } else {
+      // Generate recommended learning content
+      responseData = generateMockLearningContent(knowledgeLevel, topics, preferredFormats);
+    }
 
     // Simulate an AI service response time
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     // Update the log with the response
     if (requestId) {
@@ -80,13 +82,13 @@ serve(async (req) => {
         .from('ai_analysis_requests')
         .update({
           status: 'completed',
-          response_data: mockContent,
+          response_data: responseData,
           completed_at: new Date().toISOString()
         })
         .eq('id', requestId);
     }
 
-    return new Response(JSON.stringify(mockContent), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
@@ -98,6 +100,609 @@ serve(async (req) => {
     });
   }
 });
+
+function generateCourseContent(courseId, knowledgeLevel) {
+  // Map of course IDs to course content
+  const coursesMap = {
+    'technical_analysis_basics': generateTechnicalAnalysisCourse(knowledgeLevel),
+    'day_trading_essentials': generateDayTradingCourse(knowledgeLevel),
+    'options_trading': generateOptionsTrading(knowledgeLevel),
+    'crypto_fundamentals': generateCryptoFundamentals(knowledgeLevel),
+    'forex_trading_intro': generateForexTrading(knowledgeLevel),
+    'risk_management_101': generateRiskManagementCourse(knowledgeLevel)
+  };
+  
+  // Return the requested course or a default one if not found
+  return coursesMap[courseId] || generateDefaultCourse(knowledgeLevel);
+}
+
+function generateTechnicalAnalysisCourse(level) {
+  const difficulty = level || 'beginner';
+  
+  return {
+    course: {
+      id: 'technical_analysis_basics',
+      title: 'Technical Analysis Fundamentals',
+      description: 'Learn how to analyze price charts and identify patterns to make informed trading decisions.',
+      difficulty,
+      estimatedDuration: 60, // minutes
+      xpReward: difficulty === 'beginner' ? 300 : (difficulty === 'intermediate' ? 500 : 750),
+      topics: ['charts', 'patterns', 'indicators', 'trend analysis']
+    },
+    units: [
+      {
+        id: 'ta_unit1',
+        title: 'Chart Types and Timeframes',
+        description: 'Understanding different chart types and how to select appropriate timeframes',
+        lessons: [
+          {
+            id: 'ta_lesson1',
+            title: 'Introduction to Chart Types',
+            format: 'interactive',
+            estimatedDuration: 10,
+            interactiveContent: [
+              {
+                id: 'chart_types_step1',
+                title: 'Understanding Chart Types',
+                content: 'There are several chart types used in technical analysis. Each provides different information and has unique advantages.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'The four main chart types are Line Charts, Bar Charts (OHLC), Candlestick Charts, and Point & Figure Charts. Candlestick charts are the most popular for their visual representation of price action.'
+                },
+                points: 15
+              },
+              {
+                id: 'chart_types_step2',
+                title: 'Identify the Chart Type',
+                content: 'Can you identify which chart type shows price action most clearly?',
+                interactionType: 'clickable-element',
+                interactionData: {
+                  elements: [
+                    { id: 'line_chart', text: 'Line Chart', isCorrect: false },
+                    { id: 'bar_chart', text: 'Bar Chart', isCorrect: false },
+                    { id: 'candlestick', text: 'Candlestick Chart', isCorrect: true },
+                    { id: 'point_figure', text: 'Point & Figure Chart', isCorrect: false }
+                  ]
+                },
+                points: 20
+              },
+              {
+                id: 'chart_types_step3',
+                title: 'Candlestick Components',
+                content: 'Fill in the blanks to identify the components of a candlestick:',
+                interactionType: 'fill-in-blank',
+                interactionData: {
+                  blanks: [
+                    { id: 'blank1', correctAnswer: 'open' },
+                    { id: 'blank2', correctAnswer: 'close' },
+                    { id: 'blank3', correctAnswer: 'high' },
+                    { id: 'blank4', correctAnswer: 'low' }
+                  ]
+                },
+                points: 25
+              },
+              {
+                id: 'chart_types_step4',
+                title: 'Timeframe Selection',
+                content: 'Which timeframes would be most appropriate for day trading?',
+                interactionType: 'multiple-choice',
+                interactionData: {
+                  options: [
+                    { id: 'daily', text: 'Daily and Weekly charts', isCorrect: false },
+                    { id: 'monthly', text: 'Monthly charts', isCorrect: false },
+                    { id: 'minute', text: '1-minute, 5-minute, and 15-minute charts', isCorrect: true },
+                    { id: 'yearly', text: 'Yearly charts', isCorrect: false }
+                  ],
+                  explanation: 'Day traders typically use shorter timeframes like 1-minute, 5-minute, and 15-minute charts to capture short-term price movements.'
+                },
+                points: 25
+              },
+              {
+                id: 'chart_types_step5',
+                title: 'Key Takeaways',
+                content: 'You\'ve learned about different chart types and appropriate timeframes for various trading styles. Remember that choosing the right chart type and timeframe is crucial for effective technical analysis.',
+                interactionType: 'simple-next',
+                points: 15
+              }
+            ]
+          },
+          {
+            id: 'ta_lesson2',
+            title: 'Mastering Timeframes',
+            format: 'interactive',
+            estimatedDuration: 15,
+            interactiveContent: [
+              {
+                id: 'timeframes_step1',
+                title: 'Multiple Timeframe Analysis',
+                content: 'Analyzing multiple timeframes helps confirm trends and identify potential entry and exit points.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'A common approach is to use three timeframes: a higher timeframe to identify the overall trend, an intermediate timeframe to identify the trading range, and a lower timeframe to pinpoint entry and exit points.'
+                },
+                points: 15
+              },
+              {
+                id: 'timeframes_flashcard1',
+                title: 'Timeframe Relationships',
+                content: 'Test your knowledge of timeframe relationships.',
+                interactionType: 'flashcard',
+                interactionData: {
+                  front: 'What is the relationship between higher and lower timeframes?',
+                  back: 'Higher timeframes show the bigger picture and overall trends, while lower timeframes show more detail but also more noise. Higher timeframe signals typically have more significance than lower timeframe signals.'
+                },
+                points: 20
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'ta_unit2',
+        title: 'Key Chart Patterns',
+        description: 'Recognizing patterns that signal potential price movements',
+        lessons: [
+          {
+            id: 'ta_pattern_lesson1',
+            title: 'Reversal Patterns',
+            format: 'interactive',
+            estimatedDuration: 20,
+            interactiveContent: [
+              {
+                id: 'reversal_patterns_step1',
+                title: 'Common Reversal Patterns',
+                content: 'Reversal patterns signal that a trend is likely to change direction.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'Common reversal patterns include Head and Shoulders, Double Tops and Bottoms, Triple Tops and Bottoms, and Rounded Bottoms (Saucers).'
+                },
+                points: 15
+              },
+              {
+                id: 'reversal_patterns_step2',
+                title: 'Identifying Head and Shoulders',
+                content: 'Which of these describes a Head and Shoulders pattern?',
+                interactionType: 'multiple-choice',
+                interactionData: {
+                  options: [
+                    { id: 'option1', text: 'Three peaks of the same height', isCorrect: false },
+                    { id: 'option2', text: 'A series of higher highs and higher lows', isCorrect: false },
+                    { id: 'option3', text: 'A center peak (head) with two lower peaks (shoulders) on either side', isCorrect: true },
+                    { id: 'option4', text: 'A straight horizontal line with little price movement', isCorrect: false }
+                  ],
+                  explanation: 'A Head and Shoulders pattern consists of a center peak (head) with two lower peaks (shoulders) on either side, typically signaling a bearish reversal.'
+                },
+                points: 25
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'ta_assessment1',
+        title: 'Technical Analysis Fundamentals Assessment',
+        questions: [
+          {
+            text: 'Which chart type is most commonly used for technical analysis?',
+            options: [
+              'Line Chart',
+              'Candlestick Chart',
+              'Scatter Plot',
+              'Pie Chart'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'Candlestick charts are the most popular due to their visual representation of price movement, showing open, high, low, and close in a single candle.'
+          },
+          {
+            text: 'What does a bullish engulfing pattern indicate?',
+            options: [
+              'Potential trend continuation',
+              'Potential reversal from downtrend to uptrend',
+              'Potential reversal from uptrend to downtrend',
+              'Market indecision'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'A bullish engulfing pattern occurs when a larger green/white candle completely engulfs the previous red/black candle, indicating a potential reversal from a downtrend to an uptrend.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['day_trading_essentials', 'risk_management_101']
+  };
+}
+
+function generateDayTradingCourse(level) {
+  const difficulty = level || 'intermediate';
+  
+  return {
+    course: {
+      id: 'day_trading_essentials',
+      title: 'Day Trading Essentials',
+      description: 'Master the strategies and techniques for successful day trading.',
+      difficulty,
+      estimatedDuration: 75,
+      xpReward: 600,
+      topics: ['day trading', 'scalping', 'momentum trading', 'intraday patterns']
+    },
+    units: [
+      {
+        id: 'dt_unit1',
+        title: 'Day Trading Fundamentals',
+        description: 'Core concepts and requirements for day trading',
+        lessons: [
+          {
+            id: 'dt_lesson1',
+            title: 'What is Day Trading?',
+            format: 'interactive',
+            estimatedDuration: 15,
+            interactiveContent: [
+              {
+                id: 'day_trading_def_step1',
+                title: 'Definition of Day Trading',
+                content: 'Day trading involves opening and closing positions within the same trading day.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'Unlike position trading or swing trading, day traders don\'t hold positions overnight, avoiding overnight risk and focusing on intraday price movements to generate profits.'
+                },
+                points: 15
+              },
+              {
+                id: 'day_trading_def_step2',
+                title: 'Day Trading Requirements',
+                content: 'Which of these is NOT typically required for day trading?',
+                interactionType: 'clickable-element',
+                interactionData: {
+                  elements: [
+                    { id: 'dt_req1', text: 'Real-time market data', isCorrect: false },
+                    { id: 'dt_req2', text: 'Low-latency internet connection', isCorrect: false },
+                    { id: 'dt_req3', text: 'Long-term fundamental analysis', isCorrect: true },
+                    { id: 'dt_req4', text: 'Quick execution platform', isCorrect: false }
+                  ]
+                },
+                points: 20
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'dt_assessment1',
+        title: 'Day Trading Essentials Assessment',
+        questions: [
+          {
+            text: 'What is the primary focus of day trading?',
+            options: [
+              'Long-term investment returns',
+              'Dividend collection',
+              'Intraday price movements',
+              'Company fundamentals'
+            ],
+            correctAnswerIndex: 2,
+            explanation: 'Day trading focuses primarily on intraday price movements to generate profits, rather than long-term value or dividends.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['technical_analysis_basics', 'risk_management_101']
+  };
+}
+
+function generateOptionsTrading(level) {
+  const difficulty = level || 'advanced';
+  
+  return {
+    course: {
+      id: 'options_trading',
+      title: 'Options Trading Strategies',
+      description: 'Learn advanced options trading strategies for various market conditions.',
+      difficulty,
+      estimatedDuration: 90,
+      xpReward: 800,
+      topics: ['options', 'calls', 'puts', 'spreads', 'volatility']
+    },
+    units: [
+      {
+        id: 'options_unit1',
+        title: 'Options Basics',
+        description: 'Fundamental concepts of options contracts',
+        lessons: [
+          {
+            id: 'options_lesson1',
+            title: 'Call and Put Options',
+            format: 'interactive',
+            estimatedDuration: 20,
+            interactiveContent: [
+              {
+                id: 'options_intro_step1',
+                title: 'Options Defined',
+                content: 'Options are financial derivatives that give buyers the right, but not the obligation, to buy or sell an underlying asset at a specified price before a certain date.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'There are two types of options: calls and puts. A call option gives the holder the right to buy an asset at a certain price, while a put option gives the holder the right to sell an asset at a certain price.'
+                },
+                points: 20
+              },
+              {
+                id: 'options_intro_step2',
+                title: 'Options Components',
+                content: 'Fill in the blanks with the correct options terminology:',
+                interactionType: 'fill-in-blank',
+                interactionData: {
+                  blanks: [
+                    { id: 'options_blank1', correctAnswer: 'strike' },
+                    { id: 'options_blank2', correctAnswer: 'premium' },
+                    { id: 'options_blank3', correctAnswer: 'expiration' }
+                  ]
+                },
+                points: 30
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'options_assessment1',
+        title: 'Options Trading Assessment',
+        questions: [
+          {
+            text: 'What happens to call option value when the underlying stock price increases?',
+            options: [
+              'Decreases',
+              'Increases',
+              'Remains the same',
+              'Becomes negative'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'Call options increase in value when the underlying stock price increases, as they give the right to buy at a fixed price.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['risk_management_101', 'technical_analysis_basics']
+  };
+}
+
+function generateCryptoFundamentals(level) {
+  const difficulty = level || 'beginner';
+  
+  return {
+    course: {
+      id: 'crypto_fundamentals',
+      title: 'Cryptocurrency Trading Fundamentals',
+      description: 'Learn the basics of cryptocurrency markets and trading strategies.',
+      difficulty,
+      estimatedDuration: 70,
+      xpReward: 500,
+      topics: ['cryptocurrency', 'blockchain', 'bitcoin', 'altcoins', 'crypto exchanges']
+    },
+    units: [
+      {
+        id: 'crypto_unit1',
+        title: 'Understanding Cryptocurrencies',
+        description: 'Basic concepts of cryptocurrencies and blockchain technology',
+        lessons: [
+          {
+            id: 'crypto_lesson1',
+            title: 'What is Blockchain?',
+            format: 'interactive',
+            estimatedDuration: 15,
+            interactiveContent: [
+              {
+                id: 'blockchain_intro_step1',
+                title: 'Blockchain Technology',
+                content: 'Blockchain is the underlying technology that powers cryptocurrencies.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'A blockchain is a distributed, decentralized, public ledger that records transactions across many computers in a way that the record cannot be altered retroactively without altering all subsequent blocks.'
+                },
+                points: 15
+              },
+              {
+                id: 'blockchain_intro_step2',
+                title: 'Blockchain Properties',
+                content: 'Which of these is NOT a characteristic of blockchain technology?',
+                interactionType: 'clickable-element',
+                interactionData: {
+                  elements: [
+                    { id: 'blockchain_prop1', text: 'Decentralization', isCorrect: false },
+                    { id: 'blockchain_prop2', text: 'Immutability', isCorrect: false },
+                    { id: 'blockchain_prop3', text: 'Centralized control', isCorrect: true },
+                    { id: 'blockchain_prop4', text: 'Transparency', isCorrect: false }
+                  ]
+                },
+                points: 20
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'crypto_assessment1',
+        title: 'Cryptocurrency Fundamentals Assessment',
+        questions: [
+          {
+            text: 'Which cryptocurrency has the highest market capitalization historically?',
+            options: [
+              'Ethereum',
+              'Bitcoin',
+              'Ripple',
+              'Dogecoin'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'Bitcoin has consistently maintained the highest market capitalization in the cryptocurrency market since its inception.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['technical_analysis_basics', 'risk_management_101']
+  };
+}
+
+function generateForexTrading(level) {
+  const difficulty = level || 'intermediate';
+  
+  return {
+    course: {
+      id: 'forex_trading_intro',
+      title: 'Introduction to Forex Trading',
+      description: 'Master the fundamentals of currency trading in the forex market.',
+      difficulty,
+      estimatedDuration: 80,
+      xpReward: 650,
+      topics: ['forex', 'currency pairs', 'pips', 'leverage', 'fx market hours']
+    },
+    units: [
+      {
+        id: 'forex_unit1',
+        title: 'Forex Market Basics',
+        description: 'Understanding the forex market structure and participants',
+        lessons: [
+          {
+            id: 'forex_lesson1',
+            title: 'Currency Pairs Explained',
+            format: 'interactive',
+            estimatedDuration: 15,
+            interactiveContent: [
+              {
+                id: 'currency_pairs_step1',
+                title: 'Types of Currency Pairs',
+                content: 'Currency pairs are categorized into different types based on liquidity and trading volume.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'The main categories are Major pairs (e.g., EUR/USD, GBP/USD), Minor pairs (e.g., EUR/GBP, EUR/CHF), and Exotic pairs (e.g., USD/TRY, USD/MXN). Major pairs are the most liquid and have the tightest spreads.'
+                },
+                points: 15
+              },
+              {
+                id: 'currency_pairs_step2',
+                title: 'Base and Quote Currency',
+                content: 'In a currency pair like EUR/USD, which is the base currency?',
+                interactionType: 'multiple-choice',
+                interactionData: {
+                  options: [
+                    { id: 'base_option1', text: 'USD', isCorrect: false },
+                    { id: 'base_option2', text: 'EUR', isCorrect: true },
+                    { id: 'base_option3', text: 'Both are base currencies', isCorrect: false },
+                    { id: 'base_option4', text: 'Neither is a base currency', isCorrect: false }
+                  ],
+                  explanation: 'In a currency pair, the first currency (EUR in EUR/USD) is the base currency. The price shows how much of the quote currency (USD) is needed to buy one unit of the base currency (EUR).'
+                },
+                points: 20
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'forex_assessment1',
+        title: 'Forex Trading Assessment',
+        questions: [
+          {
+            text: 'What is a pip in forex trading?',
+            options: [
+              'A type of currency',
+              'The smallest price movement in a currency pair',
+              'A forex trading platform',
+              'A type of forex broker'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'A pip (percentage in point) is the smallest price movement in a currency pair. For most currency pairs, a pip is 0.0001 of the quote currency.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['technical_analysis_basics', 'risk_management_101']
+  };
+}
+
+function generateRiskManagementCourse(level) {
+  const difficulty = level || 'beginner';
+  
+  return {
+    course: {
+      id: 'risk_management_101',
+      title: 'Risk Management Essentials',
+      description: 'Learn how to protect your capital and manage risk effectively in trading.',
+      difficulty,
+      estimatedDuration: 60,
+      xpReward: 450,
+      topics: ['risk management', 'position sizing', 'stop loss', 'risk-reward ratio', 'drawdown']
+    },
+    units: [
+      {
+        id: 'risk_unit1',
+        title: 'Understanding Trading Risk',
+        description: 'Foundational concepts of risk in trading and investing',
+        lessons: [
+          {
+            id: 'risk_lesson1',
+            title: 'Position Sizing and Risk Per Trade',
+            format: 'interactive',
+            estimatedDuration: 15,
+            interactiveContent: [
+              {
+                id: 'position_sizing_step1',
+                title: 'The 1% Rule',
+                content: 'The 1% rule is a common risk management principle in trading.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'The 1% rule suggests that you should never risk more than 1% of your trading account on a single trade. This helps preserve capital during losing streaks and ensures longevity in the markets.'
+                },
+                points: 15
+              },
+              {
+                id: 'position_sizing_step2',
+                title: 'Calculating Position Size',
+                content: 'If you have a $10,000 account and want to risk 1% per trade with a stop loss of 50 pips on EUR/USD, how many mini lots should you trade?',
+                interactionType: 'fill-in-blank',
+                interactionData: {
+                  blanks: [
+                    { id: 'position_blank1', correctAnswer: '2' }
+                  ]
+                },
+                points: 25
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    assessments: [
+      {
+        id: 'risk_assessment1',
+        title: 'Risk Management Assessment',
+        questions: [
+          {
+            text: 'What is the primary purpose of a stop-loss order?',
+            options: [
+              'To maximize profits',
+              'To limit potential losses on a trade',
+              'To avoid paying taxes on trades',
+              'To increase leverage'
+            ],
+            correctAnswerIndex: 1,
+            explanation: 'A stop-loss order is designed to limit potential losses on a trade by automatically closing the position when the price reaches a predetermined level.'
+          }
+        ]
+      }
+    ],
+    recommendedNextCourses: ['technical_analysis_basics', 'day_trading_essentials']
+  };
+}
+
+function generateDefaultCourse(level) {
+  return generateTechnicalAnalysisCourse(level);
+}
 
 function generateMockLearningContent(knowledgeLevel, topics, preferredFormats) {
   // Generate lesson IDs
@@ -111,6 +716,78 @@ function generateMockLearningContent(knowledgeLevel, topics, preferredFormats) {
     'advanced_chart_patterns',
     'portfolio_diversification'
   ];
+  
+  // Generate short courses
+  const shortCourses = [
+    {
+      id: 'technical_analysis_basics',
+      title: 'Technical Analysis Fundamentals',
+      description: 'Learn how to analyze price charts and identify patterns to make informed trading decisions.',
+      difficulty: 'beginner',
+      estimatedDuration: 60, // minutes
+      xpReward: 300,
+      format: 'interactive',
+      completionRate: 0
+    },
+    {
+      id: 'day_trading_essentials',
+      title: 'Day Trading Essentials',
+      description: 'Master the strategies and techniques for successful day trading.',
+      difficulty: 'intermediate',
+      estimatedDuration: 75,
+      xpReward: 600,
+      format: 'interactive',
+      completionRate: 0
+    },
+    {
+      id: 'options_trading',
+      title: 'Options Trading Strategies',
+      description: 'Learn advanced options trading strategies for various market conditions.',
+      difficulty: 'advanced',
+      estimatedDuration: 90,
+      xpReward: 800,
+      format: 'interactive',
+      completionRate: 0
+    },
+    {
+      id: 'crypto_fundamentals',
+      title: 'Cryptocurrency Trading Fundamentals',
+      description: 'Learn the basics of cryptocurrency markets and trading strategies.',
+      difficulty: 'beginner',
+      estimatedDuration: 70,
+      xpReward: 500,
+      format: 'interactive',
+      completionRate: 0
+    },
+    {
+      id: 'forex_trading_intro',
+      title: 'Introduction to Forex Trading',
+      description: 'Master the fundamentals of currency trading in the forex market.',
+      difficulty: 'intermediate',
+      estimatedDuration: 80,
+      xpReward: 650,
+      format: 'interactive',
+      completionRate: 0
+    },
+    {
+      id: 'risk_management_101',
+      title: 'Risk Management Essentials',
+      description: 'Learn how to protect your capital and manage risk effectively in trading.',
+      difficulty: 'beginner',
+      estimatedDuration: 60,
+      xpReward: 450,
+      format: 'interactive',
+      completionRate: 0
+    }
+  ];
+  
+  // Filter courses based on knowledge level
+  let filteredCourses = shortCourses;
+  if (knowledgeLevel === 'beginner') {
+    filteredCourses = shortCourses.filter(c => c.difficulty === 'beginner');
+  } else if (knowledgeLevel === 'intermediate') {
+    filteredCourses = shortCourses.filter(c => c.difficulty === 'beginner' || c.difficulty === 'intermediate');
+  }
   
   // Create lessons with interactive content
   const lessons = lessonIds.map((id, index) => {
@@ -173,13 +850,77 @@ function generateMockLearningContent(knowledgeLevel, topics, preferredFormats) {
       rationale = "We recommend starting with these fundamental lessons to build your knowledge base.";
   }
   
+  // Generate achievements
+  const achievements = [
+    {
+      id: 'first_lesson',
+      title: 'First Steps',
+      description: 'Complete your first lesson',
+      xpReward: 50,
+      icon: 'trophy',
+      unlocked: false
+    },
+    {
+      id: 'course_completion',
+      title: 'Course Master',
+      description: 'Complete an entire course',
+      xpReward: 200,
+      icon: 'medal',
+      unlocked: false
+    },
+    {
+      id: 'perfect_score',
+      title: 'Perfect Score',
+      description: 'Get 100% on an assessment',
+      xpReward: 150,
+      icon: 'award',
+      unlocked: false
+    },
+    {
+      id: 'streak_7',
+      title: 'Weekly Warrior',
+      description: 'Maintain a 7-day learning streak',
+      xpReward: 300,
+      icon: 'flame',
+      unlocked: false
+    }
+  ];
+  
+  // Daily challenges
+  const dailyChallenges = [
+    {
+      id: 'daily_lesson',
+      title: 'Daily Dose',
+      description: 'Complete at least one lesson today',
+      xpReward: 75,
+      completed: false,
+      expiresIn: '24h'
+    },
+    {
+      id: 'quiz_challenge',
+      title: 'Quiz Master',
+      description: 'Score at least a 80% on any assessment',
+      xpReward: 100,
+      completed: false,
+      expiresIn: '24h'
+    }
+  ];
+  
   return {
     lessons,
     recommendedPath: {
       nextLessons,
       rationale
     },
-    assessments
+    assessments,
+    shortCourses: filteredCourses,
+    achievements,
+    dailyChallenges,
+    spacedRepetitionTips: [
+      "Review concepts 24 hours after first learning them to strengthen memory",
+      "Practice a mix of different question types to enhance recall",
+      "Return to previously completed lessons weekly for optimal retention"
+    ]
   };
 }
 
@@ -355,7 +1096,8 @@ function generateInteractiveContent(lessonId, difficulty) {
       interactionType: "info-reveal",
       interactionData: {
         revealContent: `${formatTitle(lessonId)} is critical to successful trading because it helps you make more informed decisions based on data and analysis rather than emotions.`
-      }
+      },
+      points: 15
     },
     {
       id: `${lessonId}_step2`,
@@ -369,7 +1111,8 @@ function generateInteractiveContent(lessonId, difficulty) {
           { id: "element3", text: "Following social media tips", isCorrect: false },
           { id: "element4", text: "Making emotional decisions", isCorrect: false }
         ]
-      }
+      },
+      points: 20
     },
     {
       id: `${lessonId}_step3`,
@@ -381,13 +1124,15 @@ function generateInteractiveContent(lessonId, difficulty) {
           { id: "blank1", correctAnswer: "risk" },
           { id: "blank2", correctAnswer: "return" }
         ]
-      }
+      },
+      points: 25
     },
     {
       id: `${lessonId}_step4`,
       title: "Review & Summary",
       content: `You've completed the interactive module on ${formatTitle(lessonId)}. The key takeaway is that successful trading requires discipline, knowledge, and continuous learning.`,
-      interactionType: "simple-next"
+      interactionType: "simple-next",
+      points: 10
     }
   ];
   
@@ -400,9 +1145,23 @@ function generateInteractiveContent(lessonId, difficulty) {
       interactionType: "info-reveal",
       interactionData: {
         revealContent: "By combining multiple analysis methods and timeframes, you can identify higher-probability trading opportunities with better risk/reward profiles."
-      }
+      },
+      points: 20
     });
   }
+  
+  // Add a flashcard for spaced repetition
+  baseSteps.splice(1, 0, {
+    id: `${lessonId}_flashcard1`,
+    title: "Key Concept Flashcard",
+    content: "Test your knowledge with this flashcard:",
+    interactionType: "flashcard",
+    interactionData: {
+      front: `What is the primary focus of ${formatTitle(lessonId)}?`,
+      back: `${formatTitle(lessonId)} focuses on analyzing market data to identify patterns and make informed trading decisions based on historical price action and volume.`
+    },
+    points: 15
+  });
   
   return baseSteps;
 }
