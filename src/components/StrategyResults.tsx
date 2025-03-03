@@ -1,304 +1,264 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Chart from "@/components/Chart";
-import { TradingStrategy, supabase, StrategyAnalysisRequest, StrategyAnalysisResponse } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { StrategyAnalysisResponse } from "@/integrations/supabase/client";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Download, TrendingUp, TrendingDown, Percent, DollarSign, Calendar } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import TradeCard from "@/components/TradeCard";
 
 interface StrategyResultsProps {
-  strategies: TradingStrategy[];
+  strategy: {
+    id: string;
+    name: string;
+    parameters: Record<string, any>;
+    strategyType: string;
+    timeframe: {
+      start: string;
+      end: string;
+    };
+    initialCapital: number;
+    assets: string[];
+  };
+  onSaveStrategy: () => void;
 }
 
-export default function StrategyResults({ strategies }: StrategyResultsProps) {
-  const { user } = useAuth();
+export default function StrategyResults({ strategy, onSaveStrategy }: StrategyResultsProps) {
+  const [results, setResults] = useState<StrategyAnalysisResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("performance");
   const { toast } = useToast();
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string>(strategies[0]?.id || "");
-  const [selectedStrategy, setSelectedStrategy] = useState<TradingStrategy | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<StrategyAnalysisResponse | null>(null);
-  const [chartData, setChartData] = useState<{ date: string; price: number }[]>([]);
-  
-  // Time periods for backtesting
-  const [timeframe, setTimeframe] = useState<"1m" | "3m" | "6m" | "1y" | "max">("6m");
-  
-  useEffect(() => {
-    const strategy = strategies.find(s => s.id === selectedStrategyId);
-    setSelectedStrategy(strategy || null);
-    
-    // Reset results when strategy changes
-    setResult(null);
-  }, [selectedStrategyId, strategies]);
-  
-  // Generate sample chart data
-  useEffect(() => {
-    if (result) {
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 6);
-      
-      // Generate equity curve from performance data
-      const data: { date: string; price: number }[] = [];
-      let initialValue = 10000; // $10,000 starting capital
-      
-      // Create 180 day equity curve
-      for (let i = 0; i < 180; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(currentDate.getDate() + i);
-        
-        // Apply daily return based on annualized return and volatility
-        const dailyReturn = (result.performance.annualizedReturn / 252) + 
-                            ((Math.random() * 2 - 1) * result.performance.volatility / Math.sqrt(252));
-        
-        initialValue = initialValue * (1 + dailyReturn / 100);
-        
-        data.push({
-          date: currentDate.toISOString().split('T')[0],
-          price: initialValue
-        });
-      }
-      
-      setChartData(data);
-    }
-  }, [result]);
-  
+
   const runBacktest = async () => {
-    if (!selectedStrategy || !user) return;
-    
+    setIsLoading(true);
     try {
-      setIsRunning(true);
-      
-      // Prepare request for strategy analysis
-      const request: StrategyAnalysisRequest = {
-        strategyType: selectedStrategy.strategy_type as any,
-        parameters: selectedStrategy.parameters,
-        assets: ["AAPL", "MSFT", "GOOGL", "AMZN"], // Sample assets
-        timeframe: {
-          start: getStartDate(timeframe),
-          end: new Date().toISOString()
-        },
-        initialCapital: 10000 // $10,000 starting capital
-      };
-      
-      // Call Supabase Edge Function to analyze strategy
-      const analysisResult = await supabase.aiApi.analyzeStrategy(request);
-      setResult(analysisResult);
-      
-      // Update strategy with performance metrics
-      if (selectedStrategy.id) {
-        await supabase
-          .from('trading_strategies')
-          .update({
-            performance_metrics: analysisResult.performance
-          })
-          .eq('id', selectedStrategy.id);
-      }
-      
-      toast({
-        title: "Backtest completed",
-        description: "Strategy analysis has been completed successfully"
+      const { data, error } = await supabase.functions.invoke('trading-strategy-analysis', {
+        body: {
+          strategyType: strategy.strategyType,
+          parameters: strategy.parameters,
+          assets: strategy.assets,
+          timeframe: strategy.timeframe,
+          initialCapital: strategy.initialCapital
+        }
       });
+
+      if (error) throw error;
+      
+      setResults(data as StrategyAnalysisResponse);
     } catch (error: any) {
       toast({
         title: "Error running backtest",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
-      setIsRunning(false);
+      setIsLoading(false);
     }
   };
-  
-  const getStartDate = (period: string): string => {
-    const date = new Date();
-    switch (period) {
-      case "1m":
-        date.setMonth(date.getMonth() - 1);
-        break;
-      case "3m":
-        date.setMonth(date.getMonth() - 3);
-        break;
-      case "6m":
-        date.setMonth(date.getMonth() - 6);
-        break;
-      case "1y":
-        date.setFullYear(date.getFullYear() - 1);
-        break;
-      case "max":
-        date.setFullYear(date.getFullYear() - 5);
-        break;
-    }
-    return date.toISOString();
+
+  // Helper function to format percentage values
+  const formatPercent = (value: number) => {
+    return `${(value * 100).toFixed(2)}%`;
   };
-  
-  const exportResults = () => {
-    if (!result) return;
+
+  // Format trade data for chart
+  const getChartData = () => {
+    if (!results?.trades) return [];
     
-    const dataStr = JSON.stringify(result, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `strategy-backtest-${selectedStrategy?.name.replace(/\s+/g, '-').toLowerCase()}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    let cumulativeReturn = 0;
+    return results.trades.map((trade, index) => {
+      cumulativeReturn += trade.profitPercentage;
+      return {
+        name: `Trade ${index + 1}`,
+        date: new Date(trade.exitDate).toLocaleDateString(),
+        profit: trade.profit,
+        profitPercentage: trade.profitPercentage,
+        cumulativeReturn,
+        asset: trade.asset
+      };
+    });
   };
-  
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="w-full sm:w-72">
-          <Select 
-            value={selectedStrategyId} 
-            onValueChange={setSelectedStrategyId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a strategy" />
-            </SelectTrigger>
-            <SelectContent>
-              {strategies.map(strategy => (
-                <SelectItem key={strategy.id} value={strategy.id}>
-                  {strategy.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Select 
-            value={timeframe} 
-            onValueChange={(value) => setTimeframe(value as any)}
-          >
-            <SelectTrigger className="w-full sm:w-24">
-              <SelectValue placeholder="Period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1m">1 Month</SelectItem>
-              <SelectItem value="3m">3 Months</SelectItem>
-              <SelectItem value="6m">6 Months</SelectItem>
-              <SelectItem value="1y">1 Year</SelectItem>
-              <SelectItem value="max">Max</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button onClick={runBacktest} disabled={isRunning || !selectedStrategy}>
-            {isRunning ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              "Run Backtest"
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span>Strategy Backtest Results</span>
+          <div>
+            {!results && (
+              <Button onClick={runBacktest} disabled={isLoading}>
+                {isLoading ? "Running..." : "Run Backtest"}
+              </Button>
             )}
-          </Button>
-          
-          {result && (
-            <Button variant="outline" onClick={exportResults}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      {selectedStrategy && (
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {result ? (
-              <div>
-                <div className="p-6">
-                  <Chart 
-                    data={chartData} 
-                    height={300} 
-                    color={result.performance.totalReturn > 0 ? "#10B981" : "#EF4444"}
-                  />
+            {results && (
+              <Button variant="outline" onClick={onSaveStrategy} className="ml-2">
+                Save Strategy
+              </Button>
+            )}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {results ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="performance">Performance</TabsTrigger>
+              <TabsTrigger value="trades">Trades</TabsTrigger>
+              <TabsTrigger value="chart">Chart</TabsTrigger>
+              <TabsTrigger value="optimization">Optimization</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="performance">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{formatPercent(results.performance.totalReturn)}</div>
+                    <div className="text-muted-foreground">Total Return</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{formatPercent(results.performance.annualizedReturn)}</div>
+                    <div className="text-muted-foreground">Annualized Return</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{results.performance.sharpeRatio.toFixed(2)}</div>
+                    <div className="text-muted-foreground">Sharpe Ratio</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{formatPercent(results.performance.maxDrawdown)}</div>
+                    <div className="text-muted-foreground">Max Drawdown</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{formatPercent(results.performance.winRate)}</div>
+                    <div className="text-muted-foreground">Win Rate</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{formatPercent(results.performance.volatility)}</div>
+                    <div className="text-muted-foreground">Volatility</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="trades">
+              {/* Trades table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2">Asset</th>
+                      <th className="text-left py-2">Direction</th>
+                      <th className="text-left py-2">Entry Date</th>
+                      <th className="text-left py-2">Entry Price</th>
+                      <th className="text-left py-2">Exit Date</th>
+                      <th className="text-left py-2">Exit Price</th>
+                      <th className="text-right py-2">Profit</th>
+                      <th className="text-right py-2">Profit %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.trades.map((trade, index) => (
+                      <tr key={index} className="border-b hover:bg-muted/50">
+                        <td className="py-2">{trade.asset}</td>
+                        <td className="py-2">
+                          <span className={trade.direction === 'buy' ? 'text-green-600' : 'text-red-600'}>
+                            {trade.direction.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-2">{new Date(trade.entryDate).toLocaleDateString()}</td>
+                        <td className="py-2">${trade.entryPrice.toFixed(2)}</td>
+                        <td className="py-2">{new Date(trade.exitDate).toLocaleDateString()}</td>
+                        <td className="py-2">${trade.exitPrice.toFixed(2)}</td>
+                        <td className={`py-2 text-right ${trade.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${trade.profit.toFixed(2)}
+                        </td>
+                        <td className={`py-2 text-right ${trade.profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatPercent(trade.profitPercentage)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="chart">
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getChartData()} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="cumulativeReturn" stroke="#8884d8" name="Cumulative Return" />
+                    <Line type="monotone" dataKey="profitPercentage" stroke="#82ca9d" name="Trade Return %" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="optimization">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Suggested Parameter Changes</h3>
+                  <div className="space-y-3">
+                    {results.optimization.suggestedChanges.map((suggestion, index) => (
+                      <div key={index} className="flex items-start p-3 border rounded-md">
+                        <div className="mr-3 mt-0.5">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{suggestion.parameter}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Change from <span className="font-mono">{JSON.stringify(suggestion.currentValue)}</span> to{" "}
+                            <span className="font-mono">{JSON.stringify(suggestion.suggestedValue)}</span>
+                          </div>
+                          <div className="text-sm mt-1">{suggestion.expectedImprovement}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 border-t">
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm text-gray-500">Total Return</div>
-                    <div className="flex items-center text-xl font-semibold">
-                      {result.performance.totalReturn >= 0 ? (
-                        <TrendingUp className="h-5 w-5 text-green-500 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-5 w-5 text-red-500 mr-1" />
-                      )}
-                      {result.performance.totalReturn.toFixed(2)}%
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm text-gray-500">Sharpe Ratio</div>
-                    <div className="flex items-center text-xl font-semibold">
-                      {result.performance.sharpeRatio.toFixed(2)}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm text-gray-500">Max Drawdown</div>
-                    <div className="flex items-center text-xl font-semibold">
-                      <Percent className="h-5 w-5 text-red-500 mr-1" />
-                      {result.performance.maxDrawdown.toFixed(2)}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm text-gray-500">Win Rate</div>
-                    <div className="flex items-center text-xl font-semibold">
-                      <Percent className="h-5 w-5 text-green-500 mr-1" />
-                      {result.performance.winRate.toFixed(2)}
-                    </div>
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Alternative Strategies</h3>
+                  <div className="space-y-3">
+                    {results.optimization.alternativeStrategies.map((altStrategy, index) => (
+                      <div key={index} className="p-3 border rounded-md">
+                        <div className="font-medium">{altStrategy.name}</div>
+                        <div className="text-sm text-muted-foreground">{altStrategy.description}</div>
+                        <div className="text-sm mt-1 text-green-600">{altStrategy.potentialImprovement}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                
-                {result.trades && result.trades.length > 0 && (
-                  <div className="p-6 border-t">
-                    <h3 className="text-lg font-medium mb-4">Trade History</h3>
-                    <div className="space-y-3 max-h-60 overflow-y-auto">
-                      {result.trades.slice(0, 5).map((trade, index) => (
-                        <TradeCard 
-                          key={index}
-                          trade={{
-                            id: `trade-${index}`,
-                            symbol: trade.asset,
-                            name: trade.asset,
-                            type: trade.direction,
-                            price: trade.entryPrice,
-                            quantity: 1, // Placeholder
-                            timestamp: trade.entryDate,
-                            profit: trade.profit,
-                            status: 'closed'
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium">No backtest results yet</h3>
-                <p className="text-gray-500 mt-2">
-                  Run a backtest to view performance metrics and trade history
-                </p>
-                <Button 
-                  className="mt-4" 
-                  onClick={runBacktest} 
-                  disabled={isRunning || !selectedStrategy}
-                >
-                  Run Backtest
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="text-center py-12">
+            <div className="inline-block p-3 rounded-full bg-muted mb-4">
+              <AlertCircle className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium">No Results Yet</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mt-2">
+              Run the backtest to see how your strategy would have performed historically.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
