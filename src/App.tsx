@@ -1,3 +1,4 @@
+
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Layout from "@/components/Layout";
@@ -11,7 +12,8 @@ import TradingStrategyTesting from "@/pages/TradingStrategyTesting";
 import Profile from "@/pages/Profile";
 import Simulator from "@/pages/Simulator";
 import LearningAI from "@/pages/LearningAI";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/toaster";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 function App() {
   return (
