@@ -3,22 +3,31 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Chart from "@/components/Chart";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TradingStrategy } from "@/integrations/supabase/client";
-import { Sliders, BarChart3, Zap, Share2, Save, Play } from "lucide-react";
+import { Sliders, BarChart3, Zap, Share2, Play } from "lucide-react";
 import StrategyForm from "@/components/StrategyForm";
 import StrategyResults from "@/components/StrategyResults";
 import StrategyComparison from "@/components/StrategyComparison";
 import StrategyOptimization from "@/components/StrategyOptimization";
 
+// Define the proper type structure for our Trading Strategy to match what StrategyResults expects
+interface FullTradingStrategy {
+  id: string;
+  name: string;
+  parameters: Record<string, any>;
+  strategyType: string;
+  timeframe: { start: string; end: string; };
+  initialCapital: number;
+  assets: string[];
+}
+
 export default function TradingStrategyTesting() {
   const { user } = useAuth();
   const [strategies, setStrategies] = useState<TradingStrategy[]>([]);
+  const [selectedStrategy, setSelectedStrategy] = useState<FullTradingStrategy | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("create");
   const { toast } = useToast();
@@ -42,6 +51,23 @@ export default function TradingStrategyTesting() {
       }
 
       setStrategies(data || []);
+      
+      // Convert the first strategy to the expected format if available
+      if (data && data.length > 0) {
+        const strategy = data[0];
+        setSelectedStrategy({
+          id: strategy.id,
+          name: strategy.name || 'Unnamed Strategy',
+          parameters: strategy.parameters || {},
+          strategyType: strategy.strategy_type || 'custom',
+          timeframe: {
+            start: strategy.start_date || '2023-01-01',
+            end: strategy.end_date || '2023-12-31'
+          },
+          initialCapital: strategy.initial_capital || 10000,
+          assets: strategy.assets || ['BTC', 'ETH']
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error fetching strategies",
@@ -108,9 +134,9 @@ export default function TradingStrategyTesting() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {strategies.length > 0 ? (
+              {strategies.length > 0 && selectedStrategy ? (
                 <StrategyResults 
-                  strategy={strategies[0]} 
+                  strategy={selectedStrategy} 
                   onSaveStrategy={fetchStrategies} 
                 />
               ) : (
