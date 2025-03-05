@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,7 +109,10 @@ export default function TradingStrategyTesting() {
             </CardHeader>
             <CardContent>
               {strategies.length > 0 ? (
-                <StrategyResults strategies={strategies} />
+                <StrategyResults 
+                  strategy={strategies[0]} 
+                  onSaveStrategy={fetchStrategies} 
+                />
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">No strategies to test</p>
