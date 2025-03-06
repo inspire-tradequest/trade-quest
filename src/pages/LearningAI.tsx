@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -20,6 +19,7 @@ export default function LearningAI() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [currentTab, setCurrentTab] = useState('lessons');
   const [showInteractive, setShowInteractive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     if (user) {
@@ -29,17 +29,25 @@ export default function LearningAI() {
   }, [user]);
 
   const fetchUserProgress = async () => {
+    if (!user) return;
+    
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('learning_progress')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching learning progress:', error);
+        setError(`Error fetching learning progress: ${error.message}`);
+        return;
+      }
       
       setUserProgress(data || []);
     } catch (error: any) {
       console.error('Error fetching learning progress:', error);
+      setError(`Error fetching learning progress: ${error.message}`);
     }
   };
 
@@ -47,29 +55,126 @@ export default function LearningAI() {
     if (!user) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
-      const response = await aiApi.getLearningContent({
-        userId: user.id,
-        knowledgeLevel: 'beginner',
-        topics: ['investing', 'trading', 'technical_analysis'],
-        preferredFormats: ['text', 'video', 'interactive']
-      });
-      
-      setLearningContent(response);
-      
-      if (response.recommendedPath.nextLessons.length > 0) {
-        const nextLessonId = response.recommendedPath.nextLessons[0];
-        const nextLesson = response.lessons.find(lesson => lesson.id === nextLessonId);
-        if (nextLesson) {
-          setSelectedLesson(nextLesson);
-        } else {
+      const mockResponse: LearningContentResponse = {
+        lessons: [
+          {
+            id: 'intro_to_investing',
+            title: 'Introduction to Investing',
+            description: 'Learn the basics of investing and financial markets',
+            content: 'Investing is the act of allocating resources, usually money, with the expectation of generating income or profit over time...',
+            difficulty: 'beginner',
+            estimatedDuration: 15,
+            format: 'text',
+            resources: [
+              { type: 'article', url: 'https://www.investopedia.com/terms/i/investing.asp', title: 'Investing Basics' }
+            ]
+          },
+          {
+            id: 'technical_analysis_101',
+            title: 'Technical Analysis Fundamentals',
+            description: 'Learn how to analyze price charts and identify patterns',
+            content: 'Technical analysis is a trading discipline that evaluates investments and identifies trading opportunities by analyzing statistical trends...',
+            difficulty: 'beginner',
+            estimatedDuration: 20,
+            format: 'interactive',
+            resources: [],
+            interactiveContent: [
+              {
+                id: 'ta_step1',
+                title: 'Understanding Chart Types',
+                content: 'There are several chart types used in technical analysis.',
+                interactionType: 'info-reveal',
+                interactionData: {
+                  revealContent: 'The main chart types are Line, Bar, Candlestick, and Point & Figure charts.'
+                },
+                points: 10
+              },
+              {
+                id: 'ta_step2',
+                title: 'Identify the Pattern',
+                content: 'Can you identify which pattern is shown?',
+                interactionType: 'multiple-choice',
+                interactionData: {
+                  options: [
+                    { id: 'opt1', text: 'Head and Shoulders', isCorrect: true },
+                    { id: 'opt2', text: 'Double Top', isCorrect: false },
+                    { id: 'opt3', text: 'Flag Pattern', isCorrect: false }
+                  ]
+                },
+                points: 15
+              }
+            ]
+          }
+        ],
+        recommendedPath: {
+          nextLessons: ['intro_to_investing'],
+          rationale: 'Start with the basics of investing to build a strong foundation.'
+        },
+        assessments: [
+          {
+            id: 'intro_to_investing_assessment',
+            title: 'Introduction to Investing Assessment',
+            questions: [
+              {
+                text: 'What is the primary purpose of investing?',
+                options: [
+                  'To make quick profits',
+                  'To generate income or profit over time',
+                  'To avoid taxes',
+                  'To spend money'
+                ],
+                correctAnswerIndex: 1,
+                explanation: 'Investing is about allocating resources with the expectation of generating income or profit over time.'
+              }
+            ]
+          }
+        ]
+      };
+
+      try {
+        const response = await aiApi.getLearningContent({
+          userId: user.id,
+          knowledgeLevel: 'beginner',
+          topics: ['investing', 'trading', 'technical_analysis'],
+          preferredFormats: ['text', 'video', 'interactive']
+        });
+        
+        setLearningContent(response);
+        
+        if (response.recommendedPath.nextLessons.length > 0) {
+          const nextLessonId = response.recommendedPath.nextLessons[0];
+          const nextLesson = response.lessons.find(lesson => lesson.id === nextLessonId);
+          if (nextLesson) {
+            setSelectedLesson(nextLesson);
+          } else if (response.lessons.length > 0) {
+            setSelectedLesson(response.lessons[0]);
+          }
+        } else if (response.lessons.length > 0) {
           setSelectedLesson(response.lessons[0]);
         }
-      } else if (response.lessons.length > 0) {
-        setSelectedLesson(response.lessons[0]);
+      } catch (functionError: any) {
+        console.error('Error from Supabase function:', functionError);
+        
+        setLearningContent(mockResponse);
+        
+        if (mockResponse.lessons.length > 0) {
+          setSelectedLesson(mockResponse.lessons[0]);
+        }
+        
+        toast({
+          title: "Using demo content",
+          description: "Could not connect to learning service. Using demo content instead.",
+          variant: "default",
+        });
       }
       
     } catch (error: any) {
+      console.error('Error loading learning content:', error);
+      setError(`Error loading learning content: ${error.message}`);
+      
       toast({
         title: "Error loading learning content",
         description: error.message,
@@ -84,26 +189,45 @@ export default function LearningAI() {
     if (!user) return;
     
     try {
-      const { data: existingProgress } = await supabase
+      setError(null);
+      const { data: existingProgress, error: fetchError } = await supabase
         .from('learning_progress')
         .select('*')
         .eq('user_id', user.id)
         .eq('lesson_id', lessonId)
         .maybeSingle();
       
+      if (fetchError) {
+        console.error('Error checking existing progress:', fetchError);
+        setError(`Error checking progress: ${fetchError.message}`);
+        throw fetchError;
+      }
+      
       if (existingProgress) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('learning_progress')
           .update({ completed: true })
           .eq('id', existingProgress.id);
+          
+        if (updateError) {
+          console.error('Error updating progress:', updateError);
+          setError(`Error updating progress: ${updateError.message}`);
+          throw updateError;
+        }
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from('learning_progress')
           .insert({
             user_id: user.id,
             lesson_id: lessonId,
             completed: true
           });
+          
+        if (insertError) {
+          console.error('Error inserting progress:', insertError);
+          setError(`Error saving progress: ${insertError.message}`);
+          throw insertError;
+        }
       }
       
       fetchUserProgress();
@@ -158,8 +282,24 @@ export default function LearningAI() {
   
   const handleCompleteInteractive = () => {
     setShowInteractive(false);
-    markLessonAsCompleted(selectedLesson.id);
+    if (selectedLesson) {
+      markLessonAsCompleted(selectedLesson.id);
+    }
   };
+
+  if (!user) {
+    return (
+      <div className="container max-w-6xl py-10">
+        <Card className="flex flex-col justify-center items-center p-10 text-center">
+          <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
+          <h3 className="text-xl font-medium mb-2">Sign in required</h3>
+          <p className="text-gray-500 mb-6">
+            Please sign in to access the learning center.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl py-10">
@@ -169,6 +309,28 @@ export default function LearningAI() {
           Personalized learning content tailored to your knowledge level and interests
         </p>
       </div>
+      
+      {error && (
+        <Card className="mb-6 border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="text-red-800">
+              <h3 className="font-medium mb-2">Error</h3>
+              <p>{error}</p>
+              <Button 
+                onClick={() => {
+                  setError(null);
+                  fetchUserProgress();
+                  getPersonalizedContent();
+                }}
+                variant="outline" 
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -335,7 +497,7 @@ export default function LearningAI() {
                       
                       <TabsContent value="resources">
                         <div className="space-y-3">
-                          {selectedLesson.resources.length > 0 ? (
+                          {selectedLesson.resources && selectedLesson.resources.length > 0 ? (
                             selectedLesson.resources.map((resource, index) => (
                               <div key={index} className="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
                                 <div>
@@ -358,7 +520,7 @@ export default function LearningAI() {
                       </TabsContent>
                       
                       <TabsContent value="assessments">
-                        {learningContent.assessments.some(a => a.id === `${selectedLesson.id}_assessment`) ? (
+                        {learningContent.assessments && learningContent.assessments.some(a => a.id === `${selectedLesson.id}_assessment`) ? (
                           <div>
                             <p className="mb-4">
                               Test your knowledge of {selectedLesson.title} with this assessment.
