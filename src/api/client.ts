@@ -37,13 +37,13 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     // If error is 401 and we haven't tried refreshing token yet
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         // Attempt to refresh token
         const refreshToken = localStorage.getItem(AUTH_REFRESH_TOKEN_KEY);
-        const response = await axios.post(`${BASE_URL}/auth/refresh-token`, { 
+        const response = await axios.post(`${BASE_URL}/auth/refresh`, { 
           refreshToken 
         }, {
           headers: {
@@ -96,8 +96,13 @@ export const authApi = {
   },
   
   signUp: async (email: string, password: string): Promise<{ user: User, session: Session | null }> => {
-    const response = await api.post('/auth/register', { email, password });
-    const { message, user } = response.data;
+    const response = await api.post('/auth/register', { 
+      email, 
+      password,
+      firstName: '',  // These could be collected in the UI if needed
+      lastName: ''
+    });
+    const { user } = response.data;
     
     // For services that require email verification
     return {
@@ -123,7 +128,7 @@ export const authApi = {
     
     try {
       // Verify token is valid
-      await api.get('/auth/verify');
+      await api.get('/auth/user');
       
       return {
         session: {
@@ -154,7 +159,7 @@ export const profileApi = {
 // AI Recommendations API
 export const recommendationsApi = {
   getInvestmentRecommendations: async (params: any) => {
-    const response = await api.post('/ai/investment-recommendations', params);
+    const response = await api.post('/ai/recommendations', params);
     return response.data;
   },
   
@@ -172,7 +177,7 @@ export const recommendationsApi = {
 // Market Analysis API
 export const marketAnalysisApi = {
   getMarketTrendAnalysis: async (params: any) => {
-    const response = await api.post('/ai/market-trend-analysis', params);
+    const response = await api.post('/ai/market-trends', params);
     return response.data;
   }
 };
@@ -188,22 +193,22 @@ export const riskApi = {
 // Learning API
 export const learningApi = {
   getLearningContent: async (params: any) => {
-    const response = await api.post('/ai/learning-content', params);
+    const response = await api.post('/learning/content/personalized', params);
     return response.data;
   },
   
   markLessonCompleted: async (userId: string, lessonId: string) => {
-    const response = await api.post(`/users/${userId}/learning/lessons/${lessonId}/complete`);
+    const response = await api.post(`/learning/lessons/${lessonId}/complete`);
     return response.data;
   },
   
   submitAssessment: async (userId: string, lessonId: string, answers: any) => {
-    const response = await api.post(`/users/${userId}/learning/lessons/${lessonId}/assess`, { answers });
+    const response = await api.post(`/learning/lessons/${lessonId}/assess`, { answers });
     return response.data;
   },
   
   getLearningProgress: async (userId: string) => {
-    const response = await api.get(`/users/${userId}/learning/progress`);
+    const response = await api.get(`/learning/progress`);
     return response.data;
   }
 };
@@ -215,31 +220,36 @@ export const strategyApi = {
     return response.data;
   },
   
-  getStrategies: async (userId: string) => {
-    const response = await api.get(`/users/${userId}/strategies`);
+  getStrategies: async () => {
+    const response = await api.get(`/trading-strategies`);
     return response.data;
   },
   
-  createStrategy: async (userId: string, strategyData: any) => {
-    const response = await api.post(`/users/${userId}/strategies`, strategyData);
+  createStrategy: async (strategyData: any) => {
+    const response = await api.post(`/trading-strategies`, strategyData);
     return response.data;
   },
   
   updateStrategy: async (strategyId: string, strategyData: any) => {
-    const response = await api.put(`/strategies/${strategyId}`, strategyData);
+    const response = await api.put(`/trading-strategies/${strategyId}`, strategyData);
     return response.data;
   },
   
   deleteStrategy: async (strategyId: string) => {
-    const response = await api.delete(`/strategies/${strategyId}`);
+    const response = await api.delete(`/trading-strategies/${strategyId}`);
+    return response.data;
+  },
+  
+  getStrategyByType: async (strategyType: string) => {
+    const response = await api.get(`/trading-strategies/type/${strategyType}`);
     return response.data;
   }
 };
 
 // Portfolio API
 export const portfolioApi = {
-  getPortfolios: async (userId: string) => {
-    const response = await api.get(`/users/${userId}/portfolios`);
+  getPortfolios: async () => {
+    const response = await api.get(`/portfolios`);
     return response.data;
   },
   
@@ -248,8 +258,8 @@ export const portfolioApi = {
     return response.data;
   },
   
-  createPortfolio: async (userId: string, portfolioData: any) => {
-    const response = await api.post(`/users/${userId}/portfolios`, portfolioData);
+  createPortfolio: async (portfolioData: any) => {
+    const response = await api.post(`/portfolios`, portfolioData);
     return response.data;
   },
   
@@ -275,6 +285,37 @@ export const portfolioApi = {
   
   deleteHolding: async (portfolioId: string, holdingId: string) => {
     const response = await api.delete(`/portfolios/${portfolioId}/holdings/${holdingId}`);
+    return response.data;
+  }
+};
+
+// Forum API - Added to match postman collection
+export const forumApi = {
+  getPosts: async (page = 0, size = 10) => {
+    const response = await api.get(`/forum/posts?page=${page}&size=${size}`);
+    return response.data;
+  },
+  
+  getPost: async (postId: string) => {
+    const response = await api.get(`/forum/posts/${postId}`);
+    return response.data;
+  },
+  
+  createPost: async (postData: any) => {
+    const response = await api.post(`/forum/posts`, postData);
+    return response.data;
+  }
+};
+
+// Leaderboard API - Added to match postman collection
+export const leaderboardApi = {
+  getLeaderboard: async (category: string, page = 0, size = 10) => {
+    const response = await api.get(`/leaderboard/${category}?page=${page}&size=${size}`);
+    return response.data;
+  },
+  
+  getTopPlayers: async (category: string, limit = 10) => {
+    const response = await api.get(`/leaderboard/${category}/top/${limit}`);
     return response.data;
   }
 };
