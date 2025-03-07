@@ -1,9 +1,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Profile } from "@/integrations/supabase/client";
+import { authApi, profileApi } from "@/api/client";
 
 interface AuthContextProps {
   session: Session | null;
@@ -26,71 +26,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const initAuth = async () => {
+      try {
+        const { session } = await authApi.getSession();
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
         }
-        
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+      } finally {
         setIsLoading(false);
       }
-    );
+    };
 
+    initAuth();
+
+    // Event listener for auth state changes
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
+  const handleStorageChange = (event: StorageEvent) => {
+    // If user or token was changed in another tab
+    if (event.key === 'tradequest_auth_token' || event.key === 'tradequest_user') {
+      if (!event.newValue) {
+        // If token was removed, sign out user
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } else if (event.key === 'tradequest_user' && event.newValue) {
+        // If user was updated
+        const newUser = JSON.parse(event.newValue);
+        setUser(newUser);
+        fetchProfile(newUser.id);
+      }
+    }
+  };
+
   async function fetchProfile(userId: string) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching profile:", error);
-        return;
-      }
-
-      setProfile(data);
-    } catch (error) {
-      console.error("Error in fetchProfile:", error);
+      const profileData = await profileApi.getProfile(userId);
+      setProfile(profileData);
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
     }
   }
 
   async function signIn(email: string, password: string) {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { user, session } = await authApi.signIn(email, password);
       
-      if (error) {
-        toast({
-          title: "Error signing in",
-          description: error.message,
-          variant: "destructive",
-        });
+      setSession(session);
+      setUser(user);
+      
+      if (user) {
+        await fetchProfile(user.id);
       }
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have been signed in successfully.",
+      });
     } catch (error: any) {
       toast({
         title: "Error signing in",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     } finally {
@@ -101,24 +108,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signUp(email: string, password: string) {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { user, session } = await authApi.signUp(email, password);
       
-      if (error) {
-        toast({
-          title: "Error signing up",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success!",
-          description: "Check your email for the confirmation link.",
-        });
+      // If no session is returned, email verification may be required
+      if (session) {
+        setSession(session);
+        setUser(user);
+        
+        if (user) {
+          await fetchProfile(user.id);
+        }
       }
+      
+      toast({
+        title: "Account created",
+        description: "Please check your email for verification instructions.",
+      });
     } catch (error: any) {
       toast({
         title: "Error signing up",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     } finally {
@@ -129,14 +138,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
+      await authApi.signOut();
+      
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
       toast({
         title: "Signed out successfully",
       });
     } catch (error: any) {
       toast({
         title: "Error signing out",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     } finally {

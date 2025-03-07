@@ -8,9 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, BarChart, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { aiApi, MarketTrendResponse } from "@/integrations/supabase/client";
-import Chart from "@/components/Chart";
 import { Progress } from "@/components/ui/progress";
+import { marketAnalysisApi } from "@/api/client";
+import { MarketTrendResponse } from "@/integrations/supabase/client";
+import Chart from "@/components/Chart";
 
 export default function MarketAnalysis() {
   const { user } = useAuth();
@@ -96,7 +97,7 @@ export default function MarketAnalysis() {
     
     setIsLoading(true);
     try {
-      const response = await aiApi.getMarketTrendAnalysis({
+      const response = await marketAnalysisApi.getMarketTrendAnalysis({
         assets: tickers,
         timeframe: timeframe as any,
         indicators
@@ -111,7 +112,7 @@ export default function MarketAnalysis() {
     } catch (error: any) {
       toast({
         title: "Error analyzing market",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     } finally {

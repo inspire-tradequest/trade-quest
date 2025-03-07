@@ -4,10 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, BarChart, AlertCircle, CheckCircle } from "lucide-react";
-import { aiApi, RecommendationResponse, AIRecommendation, PortfolioHolding } from "@/integrations/supabase/client";
-import { supabase } from "@/integrations/supabase/client";
+import { TrendingUp, BarChart } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { recommendationsApi, portfolioApi } from "@/api/client";
+import { RecommendationResponse, AIRecommendation } from "@/integrations/supabase/client";
 
 type RiskToleranceType = 'low' | 'medium' | 'high';
 
@@ -28,19 +28,14 @@ export default function AIRecommendations() {
 
   const fetchSavedRecommendations = async () => {
     try {
-      const { data, error } = await supabase
-        .from('ai_recommendations')
-        .select('*')
-        .eq('recommendation_type', 'investment')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
+      if (!user) return;
+      
+      const data = await recommendationsApi.getSavedRecommendations(user.id);
       setSavedRecommendations(data || []);
     } catch (error: any) {
       toast({
         title: "Error fetching recommendations",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     }
@@ -52,25 +47,20 @@ export default function AIRecommendations() {
     setIsLoading(true);
     try {
       // Get the user's current portfolio
-      const { data: portfolioData } = await supabase
-        .from('portfolios')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+      const portfolios = await portfolioApi.getPortfolios(user.id);
+      const portfolio = portfolios[0]; // Assume first portfolio for now
       
-      if (!portfolioData) throw new Error('No portfolio found');
+      if (!portfolio) {
+        throw new Error('No portfolio found');
+      }
       
-      const { data: holdings } = await supabase
-        .from('portfolio_holdings')
-        .select('asset_id, quantity, current_value')
-        .eq('portfolio_id', portfolioData.id);
-      
-      const currentPortfolio = holdings?.map((h: PortfolioHolding) => ({
-        assetId: h.asset_id,
-        amount: h.current_value
+      const portfolioDetail = await portfolioApi.getPortfolio(portfolio.id);
+      const currentPortfolio = portfolioDetail.holdings.map((h: any) => ({
+        assetId: h.assetId,
+        amount: h.currentValue
       })) || [];
       
-      const response = await aiApi.getInvestmentRecommendations({
+      const response = await recommendationsApi.getInvestmentRecommendations({
         userId: user.id,
         riskTolerance: riskTolerance,
         investmentGoals: profile?.investment_goals || [],
@@ -88,7 +78,7 @@ export default function AIRecommendations() {
     } catch (error: any) {
       toast({
         title: "Error generating recommendations",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     } finally {
@@ -98,16 +88,12 @@ export default function AIRecommendations() {
 
   const markAsRead = async (id: string) => {
     try {
-      await supabase
-        .from('ai_recommendations')
-        .update({ is_read: true })
-        .eq('id', id);
-      
+      await recommendationsApi.markAsRead(id);
       setRefreshTrigger(prev => prev + 1);
     } catch (error: any) {
       toast({
         title: "Error updating recommendation",
-        description: error.message,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
     }
